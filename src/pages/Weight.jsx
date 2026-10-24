@@ -27,7 +27,9 @@ function Goals({ profile, refresh }) {
 }
 
 function DoseForm({ last, editing, onDone }) {
-  const blank = { date: today(), dose_mg: last?.dose_mg ?? 2.5, site: "", appetite: "", side_effects: [], note: "" };
+  // 지난 투약 7일 뒤를 기본으로, 그날이 아직 안 왔으면 오늘
+  const guess = last && addDays(last.date, 7) < today() ? addDays(last.date, 7) : today();
+  const blank = { date: guess, dose_mg: last?.dose_mg ?? 2.5, site: "", appetite: "", side_effects: [], note: "" };
   const [f, setF] = useState(editing || blank);
   const [st, setSt] = useState(""), [busy, setBusy] = useState(false);
   const toggle = e => setF(p => ({ ...p, side_effects: p.side_effects.includes(e) ? p.side_effects.filter(x => x !== e) : [...p.side_effects, e] }));
@@ -41,7 +43,7 @@ function DoseForm({ last, editing, onDone }) {
   }
   return <form onSubmit={submit} autoComplete="off">
     <div className="grid-in">
-      <label>투약일<input type="date" required value={f.date} onChange={e => setF({ ...f, date: e.target.value })} /></label>
+      <label>투약일 <span className="u">(맞은 날로 바꿔 주세요)</span><input type="date" required value={f.date} onChange={e => setF({ ...f, date: e.target.value })} /></label>
       <Num label="용량" unit="mg" value={f.dose_mg} onChange={v => setF({ ...f, dose_mg: v })} />
       <label>주사 부위<select value={f.site || ""} onChange={e => setF({ ...f, site: e.target.value })}><option value="">선택 안 함</option>{SITES.map(s => <option key={s}>{s}</option>)}</select></label>
       <label>식욕 (1~5)<select value={f.appetite || ""} onChange={e => setF({ ...f, appetite: e.target.value })}>{APPETITE.map((a, i) => <option key={i} value={i || ""}>{i ? `${i} · ${a}` : "선택 안 함"}</option>)}</select></label>
@@ -93,19 +95,18 @@ export default function Weight({ data, refresh }) {
     </Panel></div>
 
     <Panel title="투약 기록" hint={`${doses.length}회`}>
-      {doses.length ? <div className="tbl-wrap"><table>
-        <thead><tr><th>투약일</th><th className="num">용량</th><th>부위</th><th>식욕</th><th>증상</th><th>메모</th><th></th></tr></thead>
-        <tbody>{[...doses].reverse().map(d => <tr key={d.id}>
-          <td className="mono">{fmtDate(d.date)}</td><td className="v">{d.dose_mg}mg</td><td>{d.site || ""}</td>
-          <td>{d.appetite ? `${d.appetite} · ${APPETITE[d.appetite]}` : ""}</td>
-          <td className="wrap-cell">{(d.side_effects || []).join(", ")}</td><td className="wrap-cell">{d.note || ""}</td>
-          <td className="actions-cell">
-            <button className="link" onClick={() => { setEditing(d); document.getElementById("dose-form").scrollIntoView({ behavior: "smooth" }); }}>수정</button>
-            {confirm === d.id ? <button className="link danger" onClick={async () => { await deleteDose(d.id); setConfirm(null); refresh(); }}>정말 삭제</button>
-              : <button className="link danger" onClick={() => setConfirm(d.id)}>삭제</button>}
-          </td>
-        </tr>)}</tbody>
-      </table></div> : <div className="chart-empty">투약 기록이 아직 없어요.</div>}
+      {doses.length ? <ul className="dose-list">{[...doses].reverse().map(d => <li key={d.id}>
+        <div className="dose-main">
+          <b className="mono">{fmtDate(d.date)}</b> <span className="mono">{d.dose_mg}mg</span>
+          <div className="card-sub">{[d.site && `부위 ${d.site}`, d.appetite && `식욕 ${d.appetite} · ${APPETITE[d.appetite]}`, (d.side_effects || []).join(", ")].filter(Boolean).join(" · ") || "추가 정보 없음"}</div>
+          {d.note && <div className="card-sub">{d.note}</div>}
+        </div>
+        <div className="dose-btns">
+          <button className="btn ghost sm" onClick={() => { setEditing(d); setConfirm(null); document.getElementById("dose-form").scrollIntoView({ behavior: "smooth" }); }}>수정</button>
+          {confirm === d.id ? <button className="btn danger sm" onClick={async () => { await deleteDose(d.id); setConfirm(null); refresh(); }}>정말 삭제</button>
+            : <button className="btn danger sm" onClick={() => setConfirm(d.id)}>삭제</button>}
+        </div>
+      </li>)}</ul> : <div className="chart-empty">투약 기록이 아직 없어요.</div>}
     </Panel>
   </>;
 }
