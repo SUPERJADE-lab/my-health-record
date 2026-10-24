@@ -57,6 +57,12 @@ export async function saveProfile(p) {
   return check(await sb.from("profile").upsert(stamp({ ...rest, user_id: await uid() })).select().single());
 }
 
+// 복용약 목록은 표를 새로 만들지 않으려고 profile.ref_overrides 안의 "_meds" 칸에 둬요
+export const getMeds = profile => profile?.ref_overrides?._meds || [];
+export async function saveMeds(profile, meds) {
+  return saveProfile({ ...profile, ref_overrides: { ...(profile.ref_overrides || {}), _meds: meds } });
+}
+
 // 기존 기록장 백업(JSON)이나 이 앱 백업을 가져와요. 같은 날짜 기록은 덮어써요.
 export async function importBackup(json, onProgress = () => {}) {
   const user_id = await uid();
@@ -88,5 +94,12 @@ export async function importBackup(json, onProgress = () => {}) {
     onProgress((done += doses.length), total);
   }
   if (json.profile && Object.keys(json.profile).length) await saveProfile(json.profile);
-  return { visits: visits.length, daily: daily.length, doses: doses.length };
+  // 약 목록 파일: 같은 이름의 약은 새 내용으로 바꾸고 나머지는 그대로 둬요
+  if (Array.isArray(json.meds) && json.meds.length) {
+    const prof = check(await sb.from("profile").select("*").maybeSingle()) || {};
+    const byName = new Map(getMeds(prof).map(m => [m.name, m]));
+    json.meds.forEach(m => m && m.name && byName.set(m.name, { ...byName.get(m.name), ...m }));
+    await saveMeds(prof, [...byName.values()]);
+  }
+  return { visits: visits.length, daily: daily.length, doses: doses.length, meds: (json.meds || []).length };
 }

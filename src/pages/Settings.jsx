@@ -38,12 +38,12 @@ function Import({ refresh }) {
     const file = e.target.files[0]; e.target.value = ""; if (!file) return;
     let json;
     try { json = JSON.parse(await file.text()); } catch { setSt("JSON 파일을 읽지 못했어요. 백업 파일이 맞는지 확인해 주세요."); return; }
-    if (!Array.isArray(json.visits) && !Array.isArray(json.daily)) { setSt("이 파일에는 검사 기록이나 일상 기록이 없어요."); return; }
+    if (!Array.isArray(json.visits) && !Array.isArray(json.daily) && !Array.isArray(json.meds)) { setSt("이 파일에는 가져올 기록이 없어요."); return; }
     setBusy(true);
     try {
       const r = await importBackup(json, (n, t) => setSt(`옮기는 중… ${n} / ${t}`));
       await refresh();
-      setSt(`다 옮겼어요. 검사 ${r.visits}회, 일상 기록 ${r.daily}일${r.doses ? `, 투약 ${r.doses}회` : ""}.`);
+      setSt(`다 옮겼어요. ${[r.visits && `검사 ${r.visits}회`, r.daily && `일상 기록 ${r.daily}일`, r.doses && `투약 ${r.doses}회`, r.meds && `복용약 ${r.meds}가지`].filter(Boolean).join(", ")}.`);
     } catch (err) { setSt("옮기다가 멈췄어요. 다시 가져오면 이어서 덮어써요. (" + err.message + ")"); }
     setBusy(false);
   }

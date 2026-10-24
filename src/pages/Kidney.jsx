@@ -2,8 +2,9 @@ import { KIDNEY_KEYS, SHORT, refText } from "../items.js";
 import { fmtDate, addDays, avg, round, lastTwo, change } from "../util.js";
 import { Panel, Value, Delta } from "../ui.jsx";
 import { ItemChart, itemHistory } from "./Lab.jsx";
+import Meds from "./Meds.jsx";
 
-export default function Kidney({ data, items }) {
+export default function Kidney({ data, items, refresh }) {
   const { visits, daily } = data;
   const kv = visits.filter(v => KIDNEY_KEYS.some(k => v.values?.[k] != null)).sort((a, b) => b.date.localeCompare(a.date));
 
@@ -17,9 +18,11 @@ export default function Kidney({ data, items }) {
 
   return <>
     <header className="page-head"><div className="eyebrow">KIDNEY</div><h1>신장 관리</h1>
-      <p className="lede">eGFR, 크레아티닌, 요단백, 칼륨, BUN을 모아 보고, 검사일 즈음의 혈압·체중과 나란히 비교해요.</p>
+      <p className="lede">먹고 있는 약과 eGFR, 크레아티닌, 요단백, 칼륨, BUN을 모아 보고, 검사일 즈음의 혈압·체중과 나란히 비교해요.</p>
       <div className="actions no-print"><button className="btn ghost" onClick={() => print()}>진료용으로 인쇄 · PDF 저장</button></div>
     </header>
+
+    <Meds data={data} refresh={refresh} />
 
     <Panel title="검사일별 비교" hint="혈압은 검사일 전 7일 평균, 체중은 검사일 직전 기록">
       <div className="tbl-wrap"><table>
