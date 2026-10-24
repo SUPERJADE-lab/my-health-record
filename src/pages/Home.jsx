@@ -1,6 +1,7 @@
 import { KIDNEY_KEYS, SHORT, flag, refText } from "../items.js";
 import { fmtDate, today, addDays, daysBetween, round, avg, lastTwo, change } from "../util.js";
 import { Panel, Value, Delta } from "../ui.jsx";
+import Chart from "../Chart.jsx";
 
 const dday = d => { const n = daysBetween(today(), d); return n === 0 ? "오늘" : n > 0 ? `D-${n}` : `${-n}일 지남`; };
 
@@ -14,7 +15,9 @@ export default function Home({ data, items, go }) {
   });
 
   const week = daily.filter(d => d.date > addDays(t, -7));
-  const [bp] = lastTwo(daily, d => d.sbp);
+  const [bp, bpPrev] = lastTwo(daily, d => d.sbp);
+  const bp30 = daily.filter(d => d.date > addDays(t, -30));
+  const bpPts = k => bp30.filter(d => d[k] != null).map(d => ({ d: d.date, v: d[k] }));
   const bpWeek = week.filter(d => d.sbp != null);
   const [wt, wtPrev] = lastTwo(daily, d => d.weight);
   const steps7 = avg(week.filter(d => d.steps != null).map(d => d.steps));
@@ -35,6 +38,26 @@ export default function Home({ data, items, go }) {
       {profile.next_visit && <p className="lede">다음 병원 검사 <b>{fmtDate(profile.next_visit)}</b> · {dday(profile.next_visit)}</p>}
     </header>
 
+    <Panel title="혈압 · 맥박" hint={bp ? `최근 측정 ${fmtDate(bp.date)}` : ""} actions={<button className="link" onClick={() => go("daily")}>기록하기 →</button>}>
+      {bp ? <div className="bp-row">
+        <div className="card">
+          <div className="card-label">최근 혈압</div>
+          <div className="card-num">{bp.sbp}/{bp.dbp ?? "-"} <small>mmHg</small></div>
+          <span className="delta">{bpPrev ? `이전(${fmtDate(bpPrev.date).slice(5)}) ${bpPrev.sbp}/${bpPrev.dbp ?? "-"}` : "이전 기록 없음"}</span>
+          <div className="card-sub">{bp.pulse != null ? `맥박 ${bp.pulse}회/분` : ""}</div>
+        </div>
+        <div className="card">
+          <div className="card-label">최근 7일 평균</div>
+          <div className="card-num">{bpWeek.length ? `${Math.round(avg(bpWeek.map(d => d.sbp)))}/${Math.round(avg(bpWeek.filter(d => d.dbp != null).map(d => d.dbp)))}` : "—"} <small>mmHg</small></div>
+          <div className="card-sub">{bpWeek.length ? `${bpWeek.length}일 측정` : "최근 7일 기록 없음"}</div>
+        </div>
+      </div> : <div className="chart-empty">혈압 기록이 아직 없어요. 일상 탭에서 넣어 주세요.</div>}
+      {bpPts("sbp").length > 0 && <>
+        <Chart height={170} from={addDays(t, -30)} to={t} band={[60, 120]} series={[{ points: bpPts("sbp"), color: "var(--high)" }, { points: bpPts("dbp"), color: "var(--low)" }, { points: bpPts("pulse"), color: "var(--muted)" }]} />
+        <p className="note"><span className="lg"><i style={{ background: "var(--high)" }} />수축기</span><span className="lg"><i style={{ background: "var(--low)" }} />이완기</span><span className="lg"><i style={{ background: "var(--muted)" }} />맥박</span> 최근 30일 · 옅은 띠는 일반 기준 60~120</p>
+      </>}
+    </Panel>
+
     <Panel title="신장 검사" hint="가장 최근 검사와 그 직전 검사 비교" actions={<button className="link" onClick={() => go("kidney")}>자세히 →</button>}>
       <div className="cards">
         {labCards.map(({ k, it, cur, c }) => <div className="card" key={k}>
@@ -47,12 +70,6 @@ export default function Home({ data, items, go }) {
     </Panel>
 
     <div className="cards cards-lg">
-      <div className="card panel-like">
-        <div className="card-label">혈압 · 맥박</div>
-        <div className="card-num">{bp ? `${bp.sbp}/${bp.dbp ?? "-"}` : "—"} <small>mmHg</small></div>
-        <div className="card-sub">{bp ? `${fmtDate(bp.date)}${bp.pulse ? ` · 맥박 ${bp.pulse}` : ""}` : "기록 없음"}</div>
-        {bpWeek.length > 0 && <div className="card-sub">최근 7일 평균 {Math.round(avg(bpWeek.map(d => d.sbp)))}/{Math.round(avg(bpWeek.filter(d => d.dbp != null).map(d => d.dbp)))}</div>}
-      </div>
       <div className="card panel-like">
         <div className="card-label">체중</div>
         <div className="card-num">{wt ? wt.weight : "—"} <small>kg</small></div>

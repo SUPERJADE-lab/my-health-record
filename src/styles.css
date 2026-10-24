@@ -145,3 +145,4 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
   .panel{break-inside:avoid;border-color:#ccc}
   .wrap{padding:0!important}
 }
+.bp-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
