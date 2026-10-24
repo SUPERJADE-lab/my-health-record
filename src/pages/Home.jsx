@@ -1,12 +1,13 @@
 import { KIDNEY_KEYS, SHORT, flag, refText } from "../items.js";
-import { fmtDate, today, addDays, daysBetween, round, avg, lastTwo, change } from "../util.js";
+import { fmtDate, today, addDays, daysBetween, avg, lastTwo, change } from "../util.js";
 import { Panel, Value, Delta } from "../ui.jsx";
 import Chart from "../Chart.jsx";
 
 const dday = d => { const n = daysBetween(today(), d); return n === 0 ? "오늘" : n > 0 ? `D-${n}` : `${-n}일 지남`; };
 
 export default function Home({ data, items, go }) {
-  const { visits, daily, doses, profile } = data;
+  // 체중·투약은 다른 사람이 볼 수 있는 홈에는 보여주지 않아요
+  const { visits, daily, profile } = data;
   const t = today();
 
   const labCards = KIDNEY_KEYS.slice(0, 4).map(k => {
@@ -19,14 +20,9 @@ export default function Home({ data, items, go }) {
   const bp30 = daily.filter(d => d.date > addDays(t, -30));
   const bpPts = k => bp30.filter(d => d[k] != null).map(d => ({ d: d.date, v: d[k] }));
   const bpWeek = week.filter(d => d.sbp != null);
-  const [wt, wtPrev] = lastTwo(daily, d => d.weight);
   const steps7 = avg(week.filter(d => d.steps != null).map(d => d.steps));
 
-  const start = profile.start_weight, goal = profile.target_weight;
-  const prog = wt && start && goal && start !== goal ? Math.min(1, Math.max(0, (start - wt.weight) / (start - goal))) : null;
 
-  const lastDose = doses[doses.length - 1];
-  const nextDose = lastDose ? addDays(lastDose.date, 7) : null;
 
   const latestVisit = [...visits].sort((a, b) => a.date.localeCompare(b.date)).filter(v => Object.keys(v.values || {}).length > 3).pop();
   const outs = latestVisit ? Object.entries(latestVisit.values).filter(([k, v]) => items[k] && flag(items[k], v)) : [];
@@ -70,21 +66,6 @@ export default function Home({ data, items, go }) {
     </Panel>
 
     <div className="cards cards-lg">
-      <div className="card panel-like">
-        <div className="card-label">체중</div>
-        <div className="card-num">{wt ? wt.weight : "—"} <small>kg</small></div>
-        <Delta c={wt && wtPrev ? change(wt.weight, wtPrev.weight) : null} unit="kg" />
-        {prog != null ? <>
-          <div className="bar"><i style={{ width: prog * 100 + "%" }} /></div>
-          <div className="card-sub">시작 {start}kg → 목표 {goal}kg · 남은 감량 <b>{round(wt.weight - goal)}kg</b></div>
-        </> : <div className="card-sub"><button className="link" onClick={() => go("weight")}>목표 체중 정하기 →</button></div>}
-      </div>
-      <div className="card panel-like">
-        <div className="card-label">마운자로</div>
-        <div className="card-num">{lastDose ? lastDose.dose_mg : "—"} <small>mg</small></div>
-        <div className="card-sub">{lastDose ? `마지막 투약 ${fmtDate(lastDose.date)}` : "투약 기록이 아직 없어요"}</div>
-        {nextDose && <div className="card-sub">다음 투약 예정 <b>{fmtDate(nextDose)}</b> · {dday(nextDose)}</div>}
-      </div>
       <div className="card panel-like">
         <div className="card-label">걸음 수</div>
         <div className="card-num">{steps7 != null ? Math.round(steps7).toLocaleString() : "—"} <small>걸음</small></div>
