@@ -8,7 +8,7 @@ function Backup({ data }) {
   const d = today();
   const json = () => download(`health-backup-${d}.json`, JSON.stringify({
     exportedAt: new Date().toISOString(), app: "my-health-record",
-    visits: data.visits.map(({ date, dept, values }) => ({ date, dept, values })),
+    visits: [...data.visits, ...data.inbody].map(({ date, dept, values }) => ({ date, dept, values })),
     daily: data.daily.map(({ user_id, updated_at, ...r }) => Object.fromEntries(Object.entries(r).filter(([, v]) => v != null))),
     doses: data.doses.map(({ id, user_id, updated_at, ...r }) => r),
     profile: (({ user_id, updated_at, ...r }) => r)(data.profile || {}),
@@ -43,7 +43,7 @@ function Import({ refresh }) {
     try {
       const r = await importBackup(json, (n, t) => setSt(`옮기는 중… ${n} / ${t}`));
       await refresh();
-      setSt(`다 옮겼어요. ${[r.visits && `검사 ${r.visits}회`, r.daily && `일상 기록 ${r.daily}일`, r.doses && `투약 ${r.doses}회`, r.meds && `복용약 ${r.meds}가지`].filter(Boolean).join(", ")}.`);
+      setSt(`다 옮겼어요. ${[r.visits && `검사·인바디 ${r.visits}회`, r.daily && `일상 기록 ${r.daily}일`, r.doses && `투약 ${r.doses}회`, r.meds && `복용약 ${r.meds}가지`].filter(Boolean).join(", ")}.`);
     } catch (err) { setSt("옮기다가 멈췄어요. 다시 가져오면 이어서 덮어써요. (" + err.message + ")"); }
     setBusy(false);
   }

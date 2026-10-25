@@ -6,6 +6,7 @@ export const sb = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : n
 
 const DAILY_NUM = ["steps", "sbp", "dbp", "pulse", "weight", "lean", "smm", "fat", "water_ml"];
 export const DAILY_FIELDS = [...DAILY_NUM, "note"];
+export const INBODY = "인바디";
 
 function check({ data, error }) { if (error) throw error; return data; }
 
@@ -25,8 +26,9 @@ export async function loadAll() {
     all("lab_visits", "date"), all("daily", "date"), all("doses", "date"),
     sb.from("profile").select("*").maybeSingle().then(check),
   ]);
+  // 인바디 결과는 표를 새로 만들지 않고 lab_visits에 진료과 "인바디"로 저장해요
   return {
-    visits, doses: doses.map(d => numify(d, ["dose_mg", "appetite"])),
+    visits: visits.filter(v => v.dept !== INBODY), inbody: visits.filter(v => v.dept === INBODY), doses: doses.map(d => numify(d, ["dose_mg", "appetite"])),
     daily: daily.map(d => numify(d, DAILY_NUM)),
     profile: prof ? numify(prof, ["start_weight", "target_weight"]) : {},
   };
@@ -39,6 +41,17 @@ export async function saveVisit(v) {
   const row = stamp({ user_id: await uid(), date: v.date, dept: v.dept, values: v.values });
   if (v.id) return check(await sb.from("lab_visits").update(row).eq("id", v.id).select().single());
   return check(await sb.from("lab_visits").upsert(row, { onConflict: "user_id,date,dept" }).select().single());
+}
+// 인바디 결과를 저장하고, 체중·체성분 그래프가 같이 움직이도록 일상 기록에도 같은 날 값을 넣어요
+export async function saveInbody(r, daily) {
+  const saved = await saveVisit({ id: r.id, date: r.date, dept: INBODY, values: r.values });
+  const prev = daily.find(d => d.date === r.date) || {};
+  const pick = { weight: r.values.weight, smm: r.values.smm, fat: r.values.pbf, lean: r.values.ffm };
+  const row = { date: r.date };
+  DAILY_FIELDS.forEach(k => { if (prev[k] != null) row[k] = prev[k]; });
+  Object.entries(pick).forEach(([k, v]) => { if (v != null) row[k] = v; });
+  await saveDaily(row);
+  return saved;
 }
 export const deleteVisit = async id => check(await sb.from("lab_visits").delete().eq("id", id));
 

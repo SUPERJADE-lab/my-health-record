@@ -152,3 +152,10 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .chip.on-acc{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
 .card-sub.warn{color:var(--high)}
 .dose-list li form{width:100%}
+.ib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px 14px;margin-top:6px}
+.ib{display:grid;gap:0;font-size:14px}
+.ib .card-label{font-size:12px;font-weight:500}
+.ib.main .mono{font-size:17px}
+.ib small{color:var(--muted);font-size:11px}
+.dose-list li .dose-main{flex:1 1 260px}
+.seg{flex-wrap:wrap}

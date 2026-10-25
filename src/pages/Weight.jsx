@@ -3,6 +3,7 @@ import { fmtDate, today, addDays, round } from "../util.js";
 import { saveDose, deleteDose, saveProfile } from "../db.js";
 import { Panel, Seg, Num } from "../ui.jsx";
 import Chart from "../Chart.jsx";
+import Inbody from "./Inbody.jsx";
 
 const SITES = ["배", "허벅지", "팔"];
 const EFFECTS = ["메스꺼움", "구토", "설사", "변비", "속쓰림", "복통", "피로", "어지러움", "주사 부위 반응"];
@@ -85,10 +86,7 @@ export default function Weight({ data, refresh }) {
       <p className="note"><span className="lg"><i style={{ background: "var(--violet)" }} />아래 보라색 눈금은 투약한 날, 점선은 목표 체중이에요.</span></p>
     </Panel>
 
-    <Panel title="체성분" hint="인바디 측정일 기록">
-      <Chart series={[{ points: pts("lean"), color: "var(--accent)" }, { points: pts("smm"), color: "var(--low)" }, { points: pts("fat"), color: "var(--high)" }]} />
-      <p className="note"><span className="lg"><i style={{ background: "var(--accent)" }} />제지방량(kg)</span><span className="lg"><i style={{ background: "var(--low)" }} />골격근량(kg)</span><span className="lg"><i style={{ background: "var(--high)" }} />체지방률(%)</span></p>
-    </Panel>
+    <Inbody data={data} refresh={refresh} />
 
     <div id="dose-form"><Panel title={editing ? `${fmtDate(editing.date)} 투약 수정` : "투약 기록하기"} hint={last ? `마지막 투약 ${fmtDate(last.date)} · 다음 예정 ${fmtDate(addDays(last.date, 7))}` : ""}>
       <DoseForm key={editing?.id || "new"} last={last} editing={editing} onDone={async () => { setEditing(null); await refresh(); }} />
