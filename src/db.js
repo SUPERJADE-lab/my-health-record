@@ -94,6 +94,16 @@ export async function importBackup(json, onProgress = () => {}) {
     check(await sb.from("lab_visits").upsert(visits.slice(i, i + 200), { onConflict: "user_id,date,dept" }));
     onProgress((done += visits.slice(i, i + 200).length), total);
   }
+  // 인바디 결과는 체중 그래프용 일상 기록에도 같은 날 값을 채워요 (그날 다른 값은 그대로)
+  const ib = visits.filter(v => v.dept === INBODY && !daily.some(d => d.date === v.date));
+  for (const v of ib) {
+    const pick = { weight: v.values.weight, smm: v.values.smm, fat: v.values.pbf };
+    const upd = Object.fromEntries(Object.entries(pick).filter(([, x]) => x != null));
+    if (!Object.keys(upd).length) continue;
+    const prev = check(await sb.from("daily").select("*").eq("date", v.date).maybeSingle());
+    if (prev) check(await sb.from("daily").update(stamp(upd)).eq("user_id", user_id).eq("date", v.date));
+    else check(await sb.from("daily").insert(stamp({ user_id, date: v.date, ...upd })));
+  }
   for (let i = 0; i < daily.length; i += 500) {
     check(await sb.from("daily").upsert(daily.slice(i, i + 500), { onConflict: "user_id,date" }));
     onProgress((done += daily.slice(i, i + 500).length), total);
