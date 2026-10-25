@@ -159,3 +159,4 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .ib small{color:var(--muted);font-size:11px}
 .dose-list li .dose-main{flex:1 1 260px}
 .seg{flex-wrap:wrap}
+textarea.paste{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px;width:100%}

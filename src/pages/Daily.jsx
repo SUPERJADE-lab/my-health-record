@@ -9,11 +9,35 @@ const FIELDS = [
   ["weight", "체중", "kg"], ["lean", "제지방량", "kg"], ["smm", "골격근량", "kg"], ["fat", "체지방률", "%"], ["water_ml", "물 마신 양", "mL", "1"],
 ];
 
+// 단축어가 복사한 글에서 값을 찾아요. 예: "날짜 2026-10-25 수축기 126 이완기 88 맥박 71"
+const PASTE_KEYS = [["sbp", /수축기[^\d]*(\d+)/], ["dbp", /이완기[^\d]*(\d+)/], ["pulse", /(?:맥박|심박)[^\d]*(\d+)/],
+  ["weight", /체중[^\d]*(\d+(?:\.\d+)?)/], ["steps", /걸음[^\d]*(\d+)/]];
+export function parsePaste(text) {
+  const out = {};
+  PASTE_KEYS.forEach(([k, re]) => { const m = text.match(re); if (m) out[k] = m[1]; });
+  const d = text.match(/(20\d\d)[.\-/년]\s*(\d{1,2})[.\-/월]\s*(\d{1,2})/);
+  if (d) out.date = `${d[1]}-${d[2].padStart(2, "0")}-${d[3].padStart(2, "0")}`;
+  return out;
+}
+
 function DayForm({ daily, onSaved }) {
   const [date, setDate] = useState(today());
   const [v, setV] = useState({}), [note, setNote] = useState("");
   const [st, setSt] = useState("빈 칸은 저장된 값을 그대로 둬요."), [bad, setBad] = useState([]), [busy, setBusy] = useState(false);
   const prev = daily.find(d => d.date === date);
+  const [pasteBox, setPasteBox] = useState(false);
+  function fill(text) {
+    const p = parsePaste(text || "");
+    const { date: pd, ...vals } = p;
+    if (!Object.keys(vals).length) { setSt("복사한 내용에서 혈압이나 맥박을 찾지 못했어요. 단축어를 다시 실행해 주세요."); setPasteBox(true); return; }
+    if (pd) setDate(pd);
+    setV(x => ({ ...x, ...vals })); setPasteBox(false);
+    setSt("붙여넣은 값을 채웠어요. 확인하고 저장을 눌러 주세요.");
+  }
+  async function paste() {
+    try { fill(await navigator.clipboard.readText()); }
+    catch { setPasteBox(true); setSt("아래 칸을 길게 눌러 붙여넣기 해 주세요."); }
+  }
   async function submit(e) {
     e.preventDefault();
     const row = { date }, wrong = [];
@@ -32,6 +56,11 @@ function DayForm({ daily, onSaved }) {
     setBusy(false);
   }
   return <form onSubmit={submit} autoComplete="off">
+    <div className="actions">
+      <button type="button" className="btn ghost" onClick={paste}>단축어 값 붙여넣기</button>
+      <span className="status">건강 앱 단축어를 실행한 뒤 누르면 혈압·맥박이 채워져요.</span>
+    </div>
+    {pasteBox && <label>여기에 붙여넣기<textarea rows="2" className="paste" onChange={e => fill(e.target.value)} placeholder="길게 눌러 붙여넣기" /></label>}
     <div className="grid-in">
       <label>날짜<input type="date" required value={date} onChange={e => setDate(e.target.value)} /></label>
       {FIELDS.map(([k, label, unit, step]) => <Num key={k} label={label} unit={unit} step={step || "any"} bad={bad.includes(k)}
