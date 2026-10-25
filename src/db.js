@@ -46,7 +46,7 @@ export async function saveVisit(v) {
 export async function saveInbody(r, daily) {
   const saved = await saveVisit({ id: r.id, date: r.date, dept: INBODY, values: r.values });
   const prev = daily.find(d => d.date === r.date) || {};
-  const pick = { weight: r.values.weight, smm: r.values.smm, fat: r.values.pbf, lean: r.values.ffm };
+  const pick = { weight: r.values.weight, smm: r.values.smm, fat: r.values.pbf };
   const row = { date: r.date };
   DAILY_FIELDS.forEach(k => { if (prev[k] != null) row[k] = prev[k]; });
   Object.entries(pick).forEach(([k, v]) => { if (v != null) row[k] = v; });

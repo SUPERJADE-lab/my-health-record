@@ -4,12 +4,15 @@ import { fmtDate, today, change } from "../util.js";
 import { Panel, Seg, Num, Delta } from "../ui.jsx";
 import Chart from "../Chart.jsx";
 
-// 인바디 결과지에 나오는 항목. main: 목록 카드에 크게 보여줄 항목
+// 인바디 앱 '상세' 화면 순서 그대로. main: 목록 카드에서 지난번 대비 변화를 보여줄 항목
 export const INBODY_FIELDS = [
-  ["weight", "체중", "kg", true], ["smm", "골격근량", "kg", true], ["bfm", "체지방량", "kg", true], ["pbf", "체지방률", "%", true],
-  ["bmi", "BMI", "kg/m²"], ["vfl", "내장지방 레벨", "", true], ["ffm", "제지방량", "kg"], ["tbw", "체수분", "L"],
-  ["protein", "단백질", "kg"], ["mineral", "무기질", "kg"], ["bmr", "기초대사량", "kcal"], ["whr", "복부지방률", ""],
-  ["score", "인바디 점수", "점"],
+  ["weight", "체중", "kg", true], ["smm", "골격근량", "kg", true], ["bfm", "체지방량", "kg", true],
+  ["bmi", "BMI", "kg/m²", true], ["pbf", "체지방률", "%", true], ["whr", "복부지방률", "", true],
+  ["vfl", "내장지방레벨", "Lv", true], ["bmr", "기초대사량", "kcal", true], ["mm", "근육량", "kg", true],
+];
+// 글로 나오는 결과
+const INBODY_TEXT = [
+  ["cid", "CID 유형", "예: 과체중 고도비만형(C자)"], ["shape", "체형좌표", "예: 비만"], ["balance", "상체하체 균형", "예: 균형"],
 ];
 const F = Object.fromEntries(INBODY_FIELDS.map(([k, n, u]) => [k, { n, u }]));
 
@@ -25,6 +28,7 @@ function Form({ editing, daily, onDone }) {
       const s = String(v[k] ?? "").trim(); if (s === "") continue;
       const n = +s; if (isNaN(n) || n < 0) wrong.push(k); else values[k] = n;
     }
+    INBODY_TEXT.forEach(([k]) => { const s = String(v[k] ?? "").trim(); if (s) values[k] = s; });
     if (note.trim()) values.note = note.trim();
     setBad(wrong);
     if (wrong.length) { setSt("빨간 칸을 확인해 주세요."); return; }
@@ -39,6 +43,7 @@ function Form({ editing, daily, onDone }) {
       <label>측정일<input type="date" required value={date} onChange={e => setDate(e.target.value)} /></label>
       {INBODY_FIELDS.map(([k, n, u]) => <Num key={k} label={n} unit={u} value={v[k] ?? ""} bad={bad.includes(k)} onChange={x => setV({ ...v, [k]: x })} />)}
     </div>
+    <div className="grid-in">{INBODY_TEXT.map(([k, n, ph]) => <label key={k}>{n}<input value={v[k] ?? ""} placeholder={ph} onChange={e => setV({ ...v, [k]: e.target.value })} /></label>)}</div>
     <label>메모<input value={note} onChange={e => setNote(e.target.value)} placeholder="예: 아침 공복, 화장실 다녀온 뒤" /></label>
     <div className="actions">
       <button className="btn" disabled={busy}>{editing ? "수정 저장" : "인바디 결과 저장"}</button>
@@ -77,6 +82,7 @@ export default function Inbody({ data, refresh }) {
               <span className="mono">{r.values[k]}<small> {u}</small></span>
               {main && prev?.values?.[k] != null && <Delta c={change(r.values[k], prev.values[k])} />}
             </div>)}</div>
+            {INBODY_TEXT.some(([k]) => r.values[k]) && <div className="card-sub">{INBODY_TEXT.filter(([k]) => r.values[k]).map(([k, n]) => `${n} ${r.values[k]}`).join(" · ")}</div>}
             {r.values.note && <div className="card-sub">{r.values.note}</div>}
           </div>
           <div className="dose-btns">
